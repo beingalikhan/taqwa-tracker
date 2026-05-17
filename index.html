@@ -379,14 +379,9 @@
   <div class="stat-item"><div class="val" id="s-revenue">₹0</div><div class="lbl">Revenue</div></div>
 </div>
 
-<div id="auth-banner">
-  <p><strong>Connect Google Drive</strong> to save all records safely to your Google Sheet.</p>
-  <button class="btn-signin" onclick="signIn()">Sign In</button>
-</div>
-
-<div class="signed-in-bar" id="signed-in-bar">
-  <span class="sync-dot green" id="sync-dot"></span>
-  <span id="signed-in-text">Connected to Google Drive</span>
+<div id="sync-banner" style="background:#f5ecd4;border-bottom:1px solid #C9A84C;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+  <span style="font-size:13px;color:#7a5c10;" id="sync-status-text">Tap to sync all data to Google Sheet</span>
+  <button class="btn-signin" id="sync-btn" onclick="startSync()">Sync Now</button>
 </div>
 
 <div class="nav-tabs">
@@ -532,16 +527,17 @@ function handleTokenResponse(resp) {
   if (resp.error) {
     if (resp.error === 'interaction_required' || resp.error === 'login_required') {
       tokenClient.requestAccessToken({ prompt: 'consent' });
+    } else {
+      document.getElementById('sync-status-text').textContent = 'Sync failed — tap to try again';
+      document.getElementById('sync-btn').textContent = 'Sync Now';
+      document.getElementById('sync-btn').disabled = false;
     }
     return;
   }
   accessToken = resp.access_token;
   isSignedIn = true;
-  localStorage.setItem('taqwa_google_hint', 'connected');
-  document.getElementById('auth-banner').style.display = 'none';
-  document.getElementById('signed-in-bar').style.display = 'flex';
-  document.getElementById('signed-in-text').textContent = 'Connected to Google Drive ✓';
-  ensureHeaders();
+  document.getElementById('sync-status-text').textContent = 'Syncing to Google Sheet...';
+  ensureHeadersThenSyncAll();
 }
 
 function initGIS() {
@@ -550,17 +546,16 @@ function initGIS() {
     scope: SCOPES,
     callback: handleTokenResponse
   });
-  if (localStorage.getItem('taqwa_google_hint') === 'connected') {
-    setTimeout(() => tokenClient.requestAccessToken({ prompt: '' }), 800);
-  }
 }
 
-function signIn() {
-  if (!tokenClient) { showToast('Loading Google Sign-in...'); setTimeout(signIn, 1000); return; }
-  tokenClient.requestAccessToken({ prompt: 'consent' });
+function startSync() {
+  if (!tokenClient) { showToast('Please wait...'); setTimeout(startSync, 1000); return; }
+  document.getElementById('sync-btn').textContent = 'Signing in...';
+  document.getElementById('sync-btn').disabled = true;
+  tokenClient.requestAccessToken({ prompt: '' });
 }
 
-async function ensureHeaders() {
+async function ensureHeadersThenSyncAll() {
   try {
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET_NAME}!A1:N1`;
     const r = await fetch(url, { headers: { Authorization: 'Bearer ' + accessToken } });
@@ -572,8 +567,12 @@ async function ensureHeaders() {
         body: JSON.stringify({ values: [HEADERS] })
       });
     }
-    syncPending();
-  } catch(e) {}
+    await syncAllToSheet();
+  } catch(e) {
+    document.getElementById('sync-status-text').textContent = 'Sync failed — tap to try again';
+    document.getElementById('sync-btn').textContent = 'Sync Now';
+    document.getElementById('sync-btn').disabled = false;
+  }
 }
 
 async function appendToSheet(row) {
@@ -630,14 +629,44 @@ async function deleteFromSheet(entryId) {
   } catch(e) { showToast('Error deleting from Sheet: ' + e.message, true); }
 }
 
-async function syncPending() {
-  const pending = entries.filter(e => !e.synced);
-  for (const e of pending) {
-    const row = entryToRow(e);
-    const ok = await appendToSheet(row);
-    if (ok) { e.synced = true; }
+async function syncAllToSheet() {
+  try {
+    // Clear existing data except header
+    const clearResp = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET_NAME}!A2:N9999:clear`,
+      { method: 'POST', headers: { Authorization: 'Bearer ' + accessToken } }
+    );
+    if (!clearResp.ok) throw new Error('Clear failed');
+
+    // Write all entries fresh
+    if (entries.length > 0) {
+      const rows = entries.map(e => entryToRow(e));
+      const writeResp = await fetch(
+        `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET_NAME}!A2:N${rows.length+1}?valueInputOption=RAW`,
+        {
+          method: 'PUT',
+          headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ values: rows })
+        }
+      );
+      if (!writeResp.ok) throw new Error('Write failed');
+    }
+
+    entries.forEach(e => e.synced = true);
+    localStorage.setItem('taqwa_entries', JSON.stringify(entries));
+    const now = new Date().toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit'});
+    document.getElementById('sync-status-text').textContent = `Last synced at ${now} ✓`;
+    document.getElementById('sync-btn').textContent = 'Sync Now';
+    document.getElementById('sync-btn').disabled = false;
+    showToast('All data synced to Google Sheet ✓');
+    isSignedIn = false;
+    accessToken = null;
+  } catch(e) {
+    document.getElementById('sync-status-text').textContent = 'Sync failed — tap to try again';
+    document.getElementById('sync-btn').textContent = 'Sync Now';
+    document.getElementById('sync-btn').disabled = false;
+    showToast('Sync failed: ' + e.message, true);
   }
-  localStorage.setItem('taqwa_entries', JSON.stringify(entries));
 }
 
 function entryToRow(e) {
@@ -696,18 +725,7 @@ async function saveEntry() {
   btn.disabled = true;
   btn.textContent = 'Saving...';
 
-  if (isSignedIn) {
-    const row = entryToRow(entry);
-    const ok = await appendToSheet(row);
-    if (ok) {
-      entry.synced = true;
-      showToast('Saved to Google Drive ✓');
-    } else {
-      showToast('Saved locally (will sync when online)');
-    }
-  } else {
-    showToast('Saved locally — sign in to sync to Drive');
-  }
+  showToast('Entry saved ✓');
 
   entries.unshift(entry);
   localStorage.setItem('taqwa_entries', JSON.stringify(entries));
@@ -740,8 +758,7 @@ async function deleteEntry(id) {
   localStorage.setItem('taqwa_entries', JSON.stringify(entries));
   updateStats();
   renderRecords();
-  if (isSignedIn) await deleteFromSheet(id);
-  showToast('Entry deleted');
+  showToast('Entry deleted — sync to update Sheet');
 }
 
 const badgeClass = { 'Doctor':'badge-doctor','Chemist':'badge-chemist','Pharmacist':'badge-pharmacist','Yoga Center':'badge-yoga','Gym':'badge-gym' };
