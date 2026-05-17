@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>TAQWA Field Sales Tracker</title>
+<meta name="theme-color" content="#1B4D2E" />
+<link rel="manifest" href="data:application/json,{&quot;name&quot;:&quot;TAQWA Tracker&quot;,&quot;short_name&quot;:&quot;TAQWA&quot;,&quot;display&quot;:&quot;standalone&quot;,&quot;background_color&quot;:&quot;#f7f5f0&quot;,&quot;theme_color&quot;:&quot;#1B4D2E&quot;}" />
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600&display=swap');
+
+  :root {
+    --green: #1B4D2E;
+    --green-light: #A8D5A2;
+    --gold: #C9A84C;
+    --gold-light: #f5ecd4;
+    --bg: #f7f5f0;
+    --surface: #ffffff;
+    --text: #1a1a1a;
+    --text-muted: #6b6b6b;
+    --border: #e2ddd6;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+
+  /* Header */
+  .app-header {
+    background: var(--green);
+    padding: 16px 20px 20px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .app-header .brand {
+    font-size: 11px;
+    color: var(--green-light);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+  .app-header h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 22px;
+    color: #fff;
+    font-weight: 400;
+  }
+  .app-header .subtitle {
+    font-size: 12px;
+    color: rgba(168,213,162,0.8);
+    margin-top: 2px;
+  }
+
+  /* Auth Banner */
+  #auth-banner {
+    background: var(--gold-light);
+    border-bottom: 1px solid var(--gold);
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  #auth-banner p { font-size: 13px; color: #7a5c10; line-height: 1.4; }
+  .btn-signin {
+    background: var(--gold);
+    color: #fff;
+    border: none;
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 600;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* Stats bar */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    background: var(--green);
+    padding: 0 20px 16px;
+  }
+  .stat-item { text-align: center; }
+  .stat-item .val { font-size: 20px; font-weight: 600; color: #fff; }
+  .stat-item .lbl { font-size: 10px; color: var(--green-light); text-transform: uppercase; letter-spacing: 0.06em; }
+
+  /* Nav tabs */
+  .nav-tabs {
+    display: flex;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 20px;
+    gap: 0;
+    position: sticky;
+    top: 88px;
+    z-index: 90;
+  }
+  .nav-tab {
+    flex: 1;
+    padding: 12px 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-muted);
+    border: none;
+    background: transparent;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.15s;
+    text-align: center;
+  }
+  .nav-tab.active { color: var(--green); border-bottom-color: var(--green); }
+
+  /* Main content */
+  .content { padding: 16px 20px 100px; }
+
+  /* Form */
+  .section-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 20px 0 10px;
+  }
+  .section-title:first-child { margin-top: 0; }
+
+  .form-group { margin-bottom: 12px; }
+  .form-group label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    width: 100%;
+    padding: 11px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 15px;
+    font-family: 'DM Sans', sans-serif;
+    background: var(--surface);
+    color: var(--text);
+    appearance: none;
+    -webkit-appearance: none;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .form-group input:focus,
+  .form-group select:focus,
+  .form-group textarea:focus { border-color: var(--green); }
+  .form-group textarea { min-height: 72px; resize: vertical; }
+
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  /* Type pills */
+  .type-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+  .type-pill {
+    padding: 8px 14px;
+    border-radius: 30px;
+    border: 1.5px solid var(--border);
+    font-size: 13px;
+    font-weight: 500;
+    background: var(--surface);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .type-pill.selected { background: var(--green); color: #fff; border-color: var(--green); }
+
+  /* Product pills */
+  .product-pills { display: flex; flex-direction: column; gap: 8px; }
+  .product-pill {
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border);
+    font-size: 13px;
+    font-weight: 500;
+    background: var(--surface);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: 'DM Sans', sans-serif;
+    text-align: left;
+  }
+  .product-pill.selected { background: #eaf3de; color: #2a5a0e; border-color: #7ab84e; }
+  .product-pill .sub { font-size: 11px; font-weight: 400; color: var(--text-muted); display: block; margin-top: 2px; }
+  .product-pill.selected .sub { color: #5a8c2e; }
+
+  /* Status pills */
+  .status-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+  .status-pill {
+    padding: 8px 14px;
+    border-radius: 30px;
+    border: 1.5px solid var(--border);
+    font-size: 13px;
+    font-weight: 500;
+    background: var(--surface);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .status-pill[data-val="Interested"].selected { background: #eaf3de; color: #2a5a0e; border-color: #7ab84e; }
+  .status-pill[data-val="Supplied"].selected { background: #e1f5ee; color: #0F6E56; border-color: #3aaa80; }
+  .status-pill[data-val="Follow-up"].selected { background: #faeeda; color: #854F0B; border-color: #e0a030; }
+  .status-pill[data-val="Declined"].selected { background: #fcebeb; color: #A32D2D; border-color: #e07070; }
+
+  /* Save button */
+  .btn-save {
+    width: 100%;
+    padding: 15px;
+    background: var(--green);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 16px;
+    font-weight: 600;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    margin-top: 20px;
+    letter-spacing: 0.02em;
+    transition: opacity 0.15s;
+  }
+  .btn-save:active { opacity: 0.85; }
+  .btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Records */
+  .filter-scroll {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    margin-bottom: 14px;
+    scrollbar-width: none;
+  }
+  .filter-scroll::-webkit-scrollbar { display: none; }
+  .filter-chip {
+    padding: 6px 14px;
+    border-radius: 30px;
+    border: 1.5px solid var(--border);
+    font-size: 12px;
+    font-weight: 600;
+    background: var(--surface);
+    color: var(--text-muted);
+    cursor: pointer;
+    white-space: nowrap;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.15s;
+  }
+  .filter-chip.active { background: var(--green); color: #fff; border-color: var(--green); }
+
+  .search-wrap { position: relative; margin-bottom: 12px; }
+  .search-wrap input { padding-left: 38px; }
+  .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 18px; color: var(--text-muted); pointer-events: none; }
+
+  .record-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-bottom: 10px;
+  }
+  .record-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 10px; }
+  .record-name { font-size: 15px; font-weight: 600; color: var(--text); line-height: 1.3; }
+  .record-type-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .badge-doctor { background: #e1f5ee; color: #0F6E56; }
+  .badge-chemist { background: #e6f1fb; color: #185FA5; }
+  .badge-pharmacist { background: #faeeda; color: #854F0B; }
+  .badge-yoga { background: #eeedfe; color: #534AB7; }
+  .badge-gym { background: #faece7; color: #993C1D; }
+
+  .record-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+  .meta-item { font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 3px; }
+  .meta-item svg { flex-shrink: 0; }
+
+  .record-products { font-size: 13px; color: var(--text); font-weight: 500; margin-bottom: 4px; }
+  .record-note { font-size: 12px; color: var(--text-muted); font-style: italic; }
+
+  .record-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+  .status-tag { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .st-interested { background: #eaf3de; color: #2a5a0e; }
+  .st-supplied { background: #e1f5ee; color: #0F6E56; }
+  .st-followup { background: #faeeda; color: #854F0B; }
+  .st-declined { background: #fcebeb; color: #A32D2D; }
+
+  .btn-delete {
+    font-size: 12px;
+    color: #A32D2D;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    padding: 4px 0;
+  }
+
+  .empty-state { text-align: center; padding: 40px 20px; color: var(--text-muted); }
+  .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-state p { font-size: 14px; line-height: 1.6; }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--green);
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 30px;
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 999;
+    transition: transform 0.3s ease;
+    white-space: nowrap;
+    box-shadow: 0 4px 20px rgba(27,77,46,0.3);
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.error { background: #A32D2D; }
+
+  /* Sync indicator */
+  .sync-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+  .sync-dot.green { background: var(--green-light); }
+  .sync-dot.orange { background: var(--gold); animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  .signed-in-bar {
+    background: #eaf3de;
+    padding: 8px 20px;
+    font-size: 12px;
+    color: #2a5a0e;
+    display: none;
+    align-items: center;
+    gap: 6px;
+  }
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <div class="brand">TAQWA Nutraceuticals</div>
+  <h1>Field Sales Tracker</h1>
+  <div class="subtitle">Doctors · Chemists · Pharmacists · Yoga · Gyms</div>
+</div>
+
+<div class="stats-bar" id="stats-bar">
+  <div class="stat-item"><div class="val" id="s-total">0</div><div class="lbl">Total</div></div>
+  <div class="stat-item"><div class="val" id="s-supplied">0</div><div class="lbl">Supplied</div></div>
+  <div class="stat-item"><div class="val" id="s-followup">0</div><div class="lbl">Follow-up</div></div>
+  <div class="stat-item"><div class="val" id="s-revenue">₹0</div><div class="lbl">Revenue</div></div>
+</div>
+
+<div id="auth-banner">
+  <p><strong>Connect Google Drive</strong> to save all records safely to your Google Sheet.</p>
+  <button class="btn-signin" onclick="signIn()">Sign In</button>
+</div>
+
+<div class="signed-in-bar" id="signed-in-bar">
+  <span class="sync-dot green" id="sync-dot"></span>
+  <span id="signed-in-text">Connected to Google Drive</span>
+</div>
+
+<div class="nav-tabs">
+  <button class="nav-tab active" onclick="switchTab('add', this)">+ Add Entry</button>
+  <button class="nav-tab" onclick="switchTab('records', this)">All Records</button>
+</div>
+
+<!-- ADD ENTRY TAB -->
+<div class="content" id="tab-add">
+
+  <div class="section-title">Contact Type</div>
+  <div class="type-pills" id="type-pills">
+    <button class="type-pill selected" data-val="Doctor" onclick="selectType(this)">Doctor</button>
+    <button class="type-pill" data-val="Chemist" onclick="selectType(this)">Chemist</button>
+    <button class="type-pill" data-val="Pharmacist" onclick="selectType(this)">Pharmacist</button>
+    <button class="type-pill" data-val="Yoga Center" onclick="selectType(this)">Yoga Center</button>
+    <button class="type-pill" data-val="Gym" onclick="selectType(this)">Gym</button>
+  </div>
+
+  <div class="section-title">Contact Details</div>
+  <div class="form-group">
+    <label>Name (Person / Clinic / Shop)</label>
+    <input type="text" id="f-name" placeholder="e.g. Dr. Ruchi Aggarwal / Aarna Ayurvedic" />
+  </div>
+  <div class="form-group">
+    <label>Address / Area</label>
+    <input type="text" id="f-address" placeholder="e.g. Lajpat Nagar, New Delhi" />
+  </div>
+  <div class="form-row">
+    <div class="form-group">
+      <label>Phone</label>
+      <input type="tel" id="f-phone" placeholder="+91 XXXXX XXXXX" />
+    </div>
+    <div class="form-group">
+      <label>Visit Date</label>
+      <input type="date" id="f-date" />
+    </div>
+  </div>
+  <div class="form-row">
+    <div class="form-group">
+      <label>Visit Time</label>
+      <input type="time" id="f-time" />
+    </div>
+    <div class="form-group">
+      <label>Partnership Tier</label>
+      <select id="f-tier">
+        <option value="">— Not discussed —</option>
+        <option>Sample Only</option>
+        <option>Starter</option>
+        <option>Clinic Network</option>
+        <option>Premium Strategic</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="section-title">Products</div>
+  <div class="product-pills" id="product-pills">
+    <button class="product-pill" data-val="Q-Vital (Shatavari)" onclick="toggleProduct(this)">
+      Q-Vital — Shatavari Capsules
+      <span class="sub">Women's hormonal health & lactation</span>
+    </button>
+    <button class="product-pill" data-val="Ashwagandha + Kaunch Beej" onclick="toggleProduct(this)">
+      Ashwagandha + Kaunch Beej
+      <span class="sub">Male vitality & stress relief</span>
+    </button>
+  </div>
+  <div class="form-row" style="margin-top:10px;">
+    <div class="form-group">
+      <label>Units Given / Sold</label>
+      <input type="number" id="f-units" placeholder="0" min="0" />
+    </div>
+    <div class="form-group">
+      <label>Price Offered (₹)</label>
+      <input type="number" id="f-price" placeholder="e.g. 166" />
+    </div>
+  </div>
+
+  <div class="section-title">Status</div>
+  <div class="status-pills">
+    <button class="status-pill selected" data-val="Interested" onclick="selectStatus(this)">Interested</button>
+    <button class="status-pill" data-val="Supplied" onclick="selectStatus(this)">Supplied</button>
+    <button class="status-pill" data-val="Follow-up" onclick="selectStatus(this)">Follow-up</button>
+    <button class="status-pill" data-val="Declined" onclick="selectStatus(this)">Declined</button>
+  </div>
+
+  <div class="section-title">Notes</div>
+  <div class="form-group">
+    <label>Next Step / Remarks</label>
+    <textarea id="f-note" placeholder="e.g. Will call back in 1 week, wants brochure, interested in commission structure..."></textarea>
+  </div>
+
+  <button class="btn-save" id="btn-save" onclick="saveEntry()">Save Entry</button>
+</div>
+
+<!-- RECORDS TAB -->
+<div class="content" id="tab-records" style="display:none;">
+  <div class="search-wrap">
+    <span class="search-icon">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    </span>
+    <input type="text" id="search-input" placeholder="Search name, area, product..." oninput="renderRecords()" />
+  </div>
+  <div class="filter-scroll">
+    <button class="filter-chip active" onclick="setFilter('All',this)">All</button>
+    <button class="filter-chip" onclick="setFilter('Doctor',this)">Doctors</button>
+    <button class="filter-chip" onclick="setFilter('Chemist',this)">Chemists</button>
+    <button class="filter-chip" onclick="setFilter('Pharmacist',this)">Pharmacists</button>
+    <button class="filter-chip" onclick="setFilter('Yoga Center',this)">Yoga</button>
+    <button class="filter-chip" onclick="setFilter('Gym',this)">Gyms</button>
+    <button class="filter-chip" onclick="setFilter('Follow-up',this)">Follow-up</button>
+  </div>
+  <div id="records-list"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const CLIENT_ID = '537669293838-8t8mm0nv9sedueeg3oi9p4ik7qglv6rj.apps.googleusercontent.com';
+const SHEET_ID = '14FTCtZmcegUPe8xMP_F5fGwQhRIRfbmgrD5TyGlGtKg';
+const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
+const SHEET_NAME = 'Sheet1';
+const HEADERS = ['ID','Date','Time','Type','Name','Address','Phone','Products','Units','Price (₹)','Tier','Status','Notes','Timestamp'];
+
+let entries = JSON.parse(localStorage.getItem('taqwa_entries') || '[]');
+let activeFilter = 'All';
+let isSignedIn = false;
+let tokenClient = null;
+let accessToken = null;
+
+// Set today date
+document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+
+// ---- GOOGLE IDENTITY ----
+function loadGIS() {
+  const s = document.createElement('script');
+  s.src = 'https://accounts.google.com/gsi/client';
+  s.onload = initGIS;
+  document.head.appendChild(s);
+}
+
+function initGIS() {
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    callback: (resp) => {
+      if (resp.error) { showToast('Sign-in failed: ' + resp.error, true); return; }
+      accessToken = resp.access_token;
+      isSignedIn = true;
+      document.getElementById('auth-banner').style.display = 'none';
+      document.getElementById('signed-in-bar').style.display = 'flex';
+      document.getElementById('signed-in-text').textContent = 'Connected to Google Drive ✓';
+      ensureHeaders();
+    }
+  });
+}
+
+function signIn() {
+  if (!tokenClient) { showToast('Loading Google Sign-in...'); setTimeout(signIn, 1000); return; }
+  tokenClient.requestAccessToken();
+}
+
+async function ensureHeaders() {
+  try {
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET_NAME}!A1:N1`;
+    const r = await fetch(url, { headers: { Authorization: 'Bearer ' + accessToken } });
+    const data = await r.json();
+    if (!data.values || data.values[0]?.[0] !== 'ID') {
+      await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET_NAME}!A1:N1?valueInputOption=RAW`, {
+        method: 'PUT',
+        headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ values: [HEADERS] })
+      });
+    }
+    syncPending();
+  } catch(e) {}
+}
+
+async function appendToSheet(row) {
+  if (!isSignedIn || !accessToken) return false;
+  try {
+    const r = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET_NAME}!A:N:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ values: [row] })
+    });
+    return r.ok;
+  } catch(e) { return false; }
+}
+
+async function deleteFromSheet(entryId) {
+  if (!isSignedIn || !accessToken) return;
+  try {
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET_NAME}!A:A`;
+    const r = await fetch(url, { headers: { Authorization: 'Bearer ' + accessToken } });
+    const data = await r.json();
+    const rows = data.values || [];
+    const rowIndex = rows.findIndex(r => r[0] == entryId);
+    if (rowIndex < 0) return;
+    const sheetInfoR = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}`, { headers: { Authorization: 'Bearer ' + accessToken } });
+    const sheetInfo = await sheetInfoR.json();
+    const sheet = sheetInfo.sheets?.find(s => s.properties.title === SHEET_NAME);
+    if (!sheet) return;
+    const sheetId = sheet.properties.sheetId;
+    await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}:batchUpdate`, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requests: [{ deleteDimension: { range: { sheetId, dimension: 'ROWS', startIndex: rowIndex, endIndex: rowIndex + 1 } } }] })
+    });
+  } catch(e) {}
+}
+
+async function syncPending() {
+  const pending = entries.filter(e => !e.synced);
+  for (const e of pending) {
+    const row = entryToRow(e);
+    const ok = await appendToSheet(row);
+    if (ok) { e.synced = true; }
+  }
+  localStorage.setItem('taqwa_entries', JSON.stringify(entries));
+}
+
+function entryToRow(e) {
+  return [e.id, e.date, e.time, e.type, e.name, e.address, e.phone, e.products.join(', '), e.units, e.price, e.tier, e.status, e.note, e.timestamp];
+}
+
+// ---- UI ----
+function selectType(btn) {
+  document.querySelectorAll('.type-pill').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+}
+function toggleProduct(btn) { btn.classList.toggle('selected'); }
+function selectStatus(btn) {
+  document.querySelectorAll('.status-pill').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+}
+
+function switchTab(tab, btn) {
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-add').style.display = tab === 'add' ? '' : 'none';
+  document.getElementById('tab-records').style.display = tab === 'records' ? '' : 'none';
+  if (tab === 'records') renderRecords();
+}
+
+function setFilter(f, btn) {
+  activeFilter = f;
+  document.querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderRecords();
+}
+
+async function saveEntry() {
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) { showToast('Please enter a name', true); return; }
+  const products = Array.from(document.querySelectorAll('.product-pill.selected')).map(b => b.dataset.val);
+  const entry = {
+    id: Date.now(),
+    timestamp: new Date().toLocaleString('en-IN'),
+    type: document.querySelector('.type-pill.selected')?.dataset.val || 'Doctor',
+    date: document.getElementById('f-date').value,
+    time: document.getElementById('f-time').value,
+    name,
+    address: document.getElementById('f-address').value.trim(),
+    phone: document.getElementById('f-phone').value.trim(),
+    products,
+    units: document.getElementById('f-units').value,
+    price: document.getElementById('f-price').value,
+    tier: document.getElementById('f-tier').value,
+    status: document.querySelector('.status-pill.selected')?.dataset.val || 'Interested',
+    note: document.getElementById('f-note').value.trim(),
+    synced: false
+  };
+
+  const btn = document.getElementById('btn-save');
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+
+  if (isSignedIn) {
+    const row = entryToRow(entry);
+    const ok = await appendToSheet(row);
+    if (ok) {
+      entry.synced = true;
+      showToast('Saved to Google Drive ✓');
+    } else {
+      showToast('Saved locally (will sync when online)');
+    }
+  } else {
+    showToast('Saved locally — sign in to sync to Drive');
+  }
+
+  entries.unshift(entry);
+  localStorage.setItem('taqwa_entries', JSON.stringify(entries));
+  updateStats();
+  clearForm();
+  btn.disabled = false;
+  btn.textContent = 'Save Entry';
+}
+
+function clearForm() {
+  document.getElementById('f-name').value = '';
+  document.getElementById('f-address').value = '';
+  document.getElementById('f-phone').value = '';
+  document.getElementById('f-units').value = '';
+  document.getElementById('f-price').value = '';
+  document.getElementById('f-note').value = '';
+  document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('f-time').value = '';
+  document.getElementById('f-tier').value = '';
+  document.querySelectorAll('.product-pill').forEach(b => b.classList.remove('selected'));
+  document.querySelectorAll('.type-pill').forEach(b => b.classList.remove('selected'));
+  document.querySelector('.type-pill').classList.add('selected');
+  document.querySelectorAll('.status-pill').forEach(b => b.classList.remove('selected'));
+  document.querySelector('.status-pill').classList.add('selected');
+}
+
+async function deleteEntry(id) {
+  if (!confirm('Delete this entry?')) return;
+  entries = entries.filter(e => e.id !== id);
+  localStorage.setItem('taqwa_entries', JSON.stringify(entries));
+  updateStats();
+  renderRecords();
+  if (isSignedIn) await deleteFromSheet(id);
+  showToast('Entry deleted');
+}
+
+const badgeClass = { 'Doctor':'badge-doctor','Chemist':'badge-chemist','Pharmacist':'badge-pharmacist','Yoga Center':'badge-yoga','Gym':'badge-gym' };
+const statusClass = { 'Interested':'st-interested','Supplied':'st-supplied','Follow-up':'st-followup','Declined':'st-declined' };
+
+function renderRecords() {
+  const q = (document.getElementById('search-input')?.value || '').toLowerCase();
+  let filtered = entries.filter(e => {
+    if (activeFilter === 'Follow-up') return e.status === 'Follow-up';
+    if (activeFilter !== 'All' && e.type !== activeFilter) return false;
+    if (q) return (e.name + e.address + e.products.join('') + e.note + e.phone).toLowerCase().includes(q);
+    return true;
+  });
+  const el = document.getElementById('records-list');
+  if (!filtered.length) {
+    el.innerHTML = `<div class="empty-state"><div class="icon">📋</div><p>No entries found.<br>Add your first contact using the Add Entry tab.</p></div>`;
+    return;
+  }
+  el.innerHTML = filtered.map(e => `
+    <div class="record-card">
+      <div class="record-top">
+        <div>
+          <div class="record-name">${e.name}</div>
+        </div>
+        <span class="record-type-badge ${badgeClass[e.type]||'badge-doctor'}">${e.type}</span>
+      </div>
+      <div class="record-meta">
+        <span class="meta-item">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          ${e.date || '—'} ${e.time ? '· ' + e.time : ''}
+        </span>
+        <span class="meta-item">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          ${e.address || '—'}
+        </span>
+        ${e.phone ? `<span class="meta-item"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2A19.79 19.79 0 0 1 11.55 19 19.45 19.45 0 0 1 5 12.44 19.79 19.79 0 0 1 2.08 4.18 2 2 0 0 1 4.06 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.574 2.81.7A2 2 0 0 1 22 16.92z"/></svg>${e.phone}</span>` : ''}
+      </div>
+      ${e.products.length ? `<div class="record-products">${e.products.join(' · ')}${e.units ? ' — ' + e.units + ' units' : ''}${e.price ? ' @ ₹' + e.price : ''}</div>` : ''}
+      ${e.tier ? `<div class="meta-item" style="margin-top:4px;font-size:12px;">Tier: ${e.tier}</div>` : ''}
+      ${e.note ? `<div class="record-note">${e.note}</div>` : ''}
+      <div class="record-footer">
+        <span class="status-tag ${statusClass[e.status]||'st-interested'}">${e.status}</span>
+        <button class="btn-delete" onclick="deleteEntry(${e.id})">Delete</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function updateStats() {
+  const total = entries.length;
+  const supplied = entries.filter(e => e.status === 'Supplied').length;
+  const followup = entries.filter(e => e.status === 'Follow-up').length;
+  const revenue = entries.filter(e => e.price && e.units).reduce((s, e) => s + (parseFloat(e.price || 0) * parseInt(e.units || 0)), 0);
+  document.getElementById('s-total').textContent = total;
+  document.getElementById('s-supplied').textContent = supplied;
+  document.getElementById('s-followup').textContent = followup;
+  document.getElementById('s-revenue').textContent = '₹' + revenue.toLocaleString('en-IN');
+}
+
+let toastTimer;
+function showToast(msg, err = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (err ? ' error' : '') + ' show';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+updateStats();
+loadGIS();
+</script>
+</body>
+</html>
