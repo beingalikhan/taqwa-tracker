@@ -528,25 +528,36 @@ function loadGIS() {
   document.head.appendChild(s);
 }
 
+function handleTokenResponse(resp) {
+  if (resp.error) {
+    if (resp.error === 'interaction_required' || resp.error === 'login_required') {
+      tokenClient.requestAccessToken({ prompt: 'consent' });
+    }
+    return;
+  }
+  accessToken = resp.access_token;
+  isSignedIn = true;
+  localStorage.setItem('taqwa_google_hint', 'connected');
+  document.getElementById('auth-banner').style.display = 'none';
+  document.getElementById('signed-in-bar').style.display = 'flex';
+  document.getElementById('signed-in-text').textContent = 'Connected to Google Drive ✓';
+  ensureHeaders();
+}
+
 function initGIS() {
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: CLIENT_ID,
     scope: SCOPES,
-    callback: (resp) => {
-      if (resp.error) { showToast('Sign-in failed: ' + resp.error, true); return; }
-      accessToken = resp.access_token;
-      isSignedIn = true;
-      document.getElementById('auth-banner').style.display = 'none';
-      document.getElementById('signed-in-bar').style.display = 'flex';
-      document.getElementById('signed-in-text').textContent = 'Connected to Google Drive ✓';
-      ensureHeaders();
-    }
+    callback: handleTokenResponse
   });
+  if (localStorage.getItem('taqwa_google_hint') === 'connected') {
+    setTimeout(() => tokenClient.requestAccessToken({ prompt: '' }), 800);
+  }
 }
 
 function signIn() {
   if (!tokenClient) { showToast('Loading Google Sign-in...'); setTimeout(signIn, 1000); return; }
-  tokenClient.requestAccessToken();
+  tokenClient.requestAccessToken({ prompt: 'consent' });
 }
 
 async function ensureHeaders() {
